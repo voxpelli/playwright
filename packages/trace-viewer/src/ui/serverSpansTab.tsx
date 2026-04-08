@@ -67,8 +67,8 @@ export const ServerSpansTab: React.FunctionComponent<{
     return <PlaceholderPanel text='No server spans' />;
 
   return <div className='fill' style={{ overflow: 'auto' }}>
-    {serverSpansModel.spans.map((span, i) => (
-      <SpanRow key={span.spanId ?? i} span={span} startTime={startTime} />
+    {serverSpansModel.spans.map(span => (
+      <SpanRow key={span.spanId} span={span} startTime={startTime} />
     ))}
   </div>;
 };

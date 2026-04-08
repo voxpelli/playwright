@@ -189,9 +189,9 @@ export const Timeline: React.FunctionComponent<{
       }</div>
       <FilmStrip boundaries={boundaries} previewPoint={previewPoint} />
       {serverSpans.length > 0 && <div className='timeline-server-spans-lane'>
-        {serverSpans.map(({ span, left, width }, i) => (
+        {serverSpans.map(({ span, left, width }) => (
           <div
-            key={span.spanId ?? i}
+            key={span.spanId}
             className={`timeline-server-span-bar timeline-server-span-bar-${span.status}`}
             style={{ left, width }}
             title={`${span.name} (${span.status})`}
