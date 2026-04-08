@@ -55,6 +55,16 @@ export const Timeline: React.FunctionComponent<{
 
   const actions = React.useMemo(() => model?.filteredActions(actionsFilter), [model, actionsFilter]);
 
+  const serverSpans = React.useMemo(() => {
+    if (!model?.serverSpans.length || !measure.width)
+      return [];
+    return model.serverSpans.map(span => {
+      const left = timeToPosition(measure.width, boundaries, span.startTime);
+      const right = timeToPosition(measure.width, boundaries, span.endTime);
+      return { span, left, width: Math.max(2, right - left) };
+    });
+  }, [model, boundaries, measure.width]);
+
   const onMouseDown = React.useCallback((event: React.MouseEvent) => {
     setPreviewPoint(undefined);
     if (!ref.current)
@@ -178,6 +188,16 @@ export const Timeline: React.FunctionComponent<{
         })
       }</div>
       <FilmStrip boundaries={boundaries} previewPoint={previewPoint} />
+      {serverSpans.length > 0 && <div className='timeline-server-spans-lane'>
+        {serverSpans.map(({ span, left, width }, i) => (
+          <div
+            key={span.spanId ?? i}
+            className={`timeline-server-span-bar timeline-server-span-bar-${span.status}`}
+            style={{ left, width }}
+            title={`${span.name} (${span.status})`}
+          />
+        ))}
+      </div>}
       {scrubber}
       {selectedTime && <div className='timeline-window'>
         <div className='timeline-window-curtain left' style={{ width: curtainLeft }}></div>
