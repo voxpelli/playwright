@@ -287,7 +287,7 @@ const PartitionedWorkbench: React.FunctionComponent<WorkbenchProps & { partition
     title: 'Server',
     count: serverSpansModel.spans.length || undefined,
     errorCount: serverSpansModel.errorCount || undefined,
-    render: () => <ServerSpansTab serverSpansModel={serverSpansModel} startTime={model?.startTime ?? 0} />
+    render: () => <ServerSpansTab serverSpansModel={serverSpansModel} />
   };
 
   const tabs: TabbedPaneTabModel[] = [

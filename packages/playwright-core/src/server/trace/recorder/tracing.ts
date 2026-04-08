@@ -78,6 +78,8 @@ type RecordingState = {
   groupStack: string[];
   traceId?: string;
   traceRootSpanId?: string;
+  chunkWallTime?: number;
+  chunkMonotonicTime?: number;
 };
 
 export class Tracing extends SdkObject implements InstrumentationListener, SnapshotterDelegate, HarTracerDelegate {
@@ -215,11 +217,15 @@ export class Tracing extends SdkObject implements InstrumentationListener, Snaps
       this._fs.writeFile(this._state.networkFile, '');
 
     this._fs.mkdir(path.dirname(this._state.traceFile));
+    const chunkWallTime = Date.now();
+    const chunkMonotonicTime = monotonicTime();
+    this._state.chunkWallTime = chunkWallTime;
+    this._state.chunkMonotonicTime = chunkMonotonicTime;
     const event: trace.TraceEvent = {
       ...this._contextCreatedEvent,
       title: options.title,
-      wallTime: Date.now(),
-      monotonicTime: monotonicTime(),
+      wallTime: chunkWallTime,
+      monotonicTime: chunkMonotonicTime,
       traceId: this._state.traceId,
     };
     this._appendTraceEvent(event);
@@ -356,15 +362,28 @@ export class Tracing extends SdkObject implements InstrumentationListener, Snaps
   addServerSpans(spans: ServerSpan[]) {
     if (!this._state?.recording)
       return;
+    const traceId = this._state.traceId;
+    const chunkWallTime = this._state.chunkWallTime;
+    const chunkMonotonicTime = this._state.chunkMonotonicTime;
     for (const span of spans) {
+      // When traceContext is enabled, only accept spans that belong to this trace.
+      if (traceId && span.traceId !== traceId)
+        continue;
+      // Convert epoch ms timestamps to monotonic ms so they align with browser action times.
+      let startTime = span.startTime;
+      let endTime = span.endTime;
+      if (chunkWallTime !== undefined && chunkMonotonicTime !== undefined) {
+        startTime = chunkMonotonicTime + (span.startTime - chunkWallTime);
+        endTime = chunkMonotonicTime + (span.endTime - chunkWallTime);
+      }
       const event: trace.ServerSpanTraceEvent = {
         type: 'server-span',
         traceId: span.traceId,
         spanId: span.spanId,
         parentSpanId: span.parentSpanId,
         name: span.name,
-        startTime: span.startTime,
-        endTime: span.endTime,
+        startTime,
+        endTime,
         status: span.status,
         errorMessage: span.errorMessage,
         attributes: span.attributes as Record<string, string | number | boolean> | undefined,

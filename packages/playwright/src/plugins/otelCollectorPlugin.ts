@@ -96,7 +96,15 @@ export type OtelSpan = {
 function nanoToMs(nano: string | number | undefined): number {
   if (nano === undefined)
     return 0;
-  return Number(BigInt(nano) / 1000000n);
+  // BigInt only accepts integer strings; guard against fractional strings from some SDKs.
+  const asNumber = Number(nano);
+  if (!Number.isFinite(asNumber))
+    return 0;
+  try {
+    return Number(BigInt(Math.floor(asNumber)) / 1000000n);
+  } catch {
+    return Math.floor(asNumber / 1e6);
+  }
 }
 
 function decodeAttributes(attrs: OtlpKeyValue[] | undefined): Record<string, unknown> | undefined {
@@ -192,12 +200,15 @@ export class OtelCollectorPlugin implements TestRunnerPlugin {
 
     // Expose endpoint so OTel SDKs in the same process auto-discover it.
     process.env.OTEL_EXPORTER_OTLP_ENDPOINT = this._endpoint;
+    // Expose endpoint so Playwright fixtures in workers can drain spans.
+    process.env.PLAYWRIGHT_OTEL_COLLECTOR = this._endpoint;
 
     const label = this._options.name ?? 'OtelCollector';
     this._reporter.onStdOut?.(colors.dim(`[${label}] `) + `Listening on ${this._endpoint}/v1/traces\n`);
   }
 
   async teardown(): Promise<void> {
+    delete process.env.PLAYWRIGHT_OTEL_COLLECTOR;
     await new Promise<void>((resolve, reject) => {
       if (!this._server) {
         resolve();
@@ -217,7 +228,7 @@ export class OtelCollectorPlugin implements TestRunnerPlugin {
 
   private _createServer(): http.Server {
     return http.createServer((req, res) => {
-      if (req.method !== 'POST' || req.url !== '/v1/traces') {
+      if (req.method !== 'POST') {
         res.writeHead(404);
         res.end();
         return;
@@ -228,12 +239,22 @@ export class OtelCollectorPlugin implements TestRunnerPlugin {
       req.on('end', () => {
         try {
           const body = Buffer.concat(chunks).toString('utf8');
-          const payload = JSON.parse(body) as OtlpPayload;
-          this._ingestPayload(payload);
-          res.writeHead(200, { 'Content-Type': 'application/json' });
-          res.end('{}');
+          if (req.url === '/v1/traces') {
+            const payload = JSON.parse(body) as OtlpPayload;
+            this._ingestPayload(payload);
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end('{}');
+          } else if (req.url === '/v1/drain') {
+            const { traceId } = JSON.parse(body) as { traceId: string };
+            const spans = this._correlator?.drain(traceId) ?? [];
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ spans }));
+          } else {
+            res.writeHead(404);
+            res.end();
+          }
         } catch (e) {
-          this._reporter?.onStdErr?.(colors.dim(`[${this._options.name ?? 'OtelCollector'}] `) + `Failed to parse OTLP payload: ${e}\n`);
+          this._reporter?.onStdErr?.(colors.dim(`[${this._options.name ?? 'OtelCollector'}] `) + `Failed to parse request: ${e}\n`);
           res.writeHead(400);
           res.end();
         }

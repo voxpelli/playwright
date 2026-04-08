@@ -28,7 +28,7 @@ type ServerSpansTabModel = {
 
 export function useServerSpansTabModel(model: TraceModel | undefined): ServerSpansTabModel {
   return React.useMemo(() => {
-    const spans = model?.serverSpans ?? [];
+    const spans = model?.serverSpans ? [...model.serverSpans].sort((a, b) => a.startTime - b.startTime) : [];
     const errorCount = spans.filter(s => s.status === 'error').length;
     return { spans, errorCount };
   }, [model]);
@@ -36,7 +36,7 @@ export function useServerSpansTabModel(model: TraceModel | undefined): ServerSpa
 
 const KEY_ATTRIBUTES = new Set(['http.method', 'http.status_code', 'db.system', 'rpc.method', 'messaging.system']);
 
-const SpanRow: React.FC<{ span: ServerSpanTraceEvent, startTime: number }> = ({ span, startTime }) => {
+const SpanRow: React.FC<{ span: ServerSpanTraceEvent }> = ({ span }) => {
   const serviceName = (span.resource?.['service.name'] as string | undefined) ?? '';
   const duration = span.endTime - span.startTime;
   const keyAttrs = span.attributes
@@ -61,14 +61,13 @@ const SpanRow: React.FC<{ span: ServerSpanTraceEvent, startTime: number }> = ({ 
 
 export const ServerSpansTab: React.FunctionComponent<{
   serverSpansModel: ServerSpansTabModel;
-  startTime: number;
-}> = ({ serverSpansModel, startTime }) => {
+}> = ({ serverSpansModel }) => {
   if (!serverSpansModel.spans.length)
     return <PlaceholderPanel text='No server spans' />;
 
   return <div className='fill' style={{ overflow: 'auto' }}>
     {serverSpansModel.spans.map(span => (
-      <SpanRow key={span.spanId} span={span} startTime={startTime} />
+      <SpanRow key={span.spanId} span={span} />
     ))}
   </div>;
 };

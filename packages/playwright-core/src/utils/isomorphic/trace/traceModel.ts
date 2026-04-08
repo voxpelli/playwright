@@ -334,6 +334,10 @@ function adjustMonotonicTime(contexts: ContextEntry[], monotonicTimeDelta: numbe
       if (resource._monotonicTime)
         resource._monotonicTime += monotonicTimeDelta;
     }
+    for (const span of context.serverSpans) {
+      span.startTime += monotonicTimeDelta;
+      span.endTime += monotonicTimeDelta;
+    }
   }
 }
 
