@@ -1033,6 +1033,30 @@ interface TestConfig<TestArgs = {}, WorkerArgs = {}> {
    */
   webServer?: TestConfigWebServer | TestConfigWebServer[];
   /**
+   * Configuration for the built-in OTLP/HTTP collector. When set, Playwright starts a local OpenTelemetry collector
+   * before any tests run and shuts it down afterwards — mirroring the lifecycle of
+   * [testConfig.webServer](https://playwright.dev/docs/api/class-testconfig#test-config-web-server).
+   *
+   * The collector listens for OTLP/HTTP JSON (`POST /v1/traces`) and automatically sets the
+   * `OTEL_EXPORTER_OTLP_ENDPOINT` environment variable so any OpenTelemetry SDK in the same process discovers it
+   * automatically.
+   *
+   * **Usage**
+   *
+   * ```js
+   * // playwright.config.ts
+   * import { defineConfig } from '@playwright/test';
+   *
+   * export default defineConfig({
+   *   otelCollector: {
+   *     port: 4318,
+   *   },
+   * });
+   * ```
+   *
+   */
+  otelCollector?: TestConfigOtelCollector;
+  /**
    * Playwright transpiler configuration.
    *
    * **Usage**
@@ -10392,5 +10416,23 @@ interface TestConfigWebServer {
    * checked. Either `port` or `url` should be specified.
    */
   url?: string;
+}
+
+interface TestConfigOtelCollector {
+  /**
+   * The port to listen on for OTLP/HTTP JSON requests (`POST /v1/traces`). Defaults to `4318` (the standard OTLP/HTTP
+   * port). Use `0` to let the OS pick a free port.
+   */
+  port?: number;
+
+  /**
+   * The hostname or IP address to bind to. Defaults to `'127.0.0.1'` (localhost only).
+   */
+  host?: string;
+
+  /**
+   * Display name used in log output prefixes. Defaults to `'OtelCollector'`.
+   */
+  name?: string;
 }
 

@@ -22,6 +22,7 @@ import { getPackageJsonPath, mergeObjects } from '../util';
 
 import type { Config, Fixtures, Metadata, Project, ReporterDescription } from '../../types/test';
 import type { TestRunnerPluginRegistration } from '../plugins';
+import type { OtelCollectorOptions } from '../plugins/otelCollectorPlugin';
 import type { Matcher, TestCaseFilter } from '../util';
 import type { ConfigCLIOverrides } from './ipc';
 import type { Location } from '../../types/testReporter';
@@ -44,6 +45,7 @@ export class FullConfigInternal {
   readonly configDir: string;
   readonly configCLIOverrides: ConfigCLIOverrides;
   readonly webServers: NonNullable<FullConfig['webServer']>[];
+  readonly otelCollectors: OtelCollectorOptions[];
   readonly plugins: TestRunnerPluginRegistration[];
   readonly projects: FullProjectInternal[] = [];
   readonly singleTSConfigPath?: string;
@@ -139,6 +141,14 @@ export class FullConfigInternal {
     } else {
       this.webServers = [];
     }
+
+    const otelCollectors = takeFirst((userConfig as any).otelCollector, null);
+    if (Array.isArray(otelCollectors))
+      this.otelCollectors = otelCollectors;
+    else if (otelCollectors)
+      this.otelCollectors = [otelCollectors];
+    else
+      this.otelCollectors = [];
 
     // When no projects are defined, do not use config.workers as a hard limit for project.workers.
     const projectConfigs = configCLIOverrides.projects || userConfig.projects || [{ ...userConfig, workers: undefined }];

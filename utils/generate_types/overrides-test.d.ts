@@ -66,6 +66,7 @@ interface TestConfig<TestArgs = {}, WorkerArgs = {}> {
   reporter?: LiteralUnion<'list'|'dot'|'line'|'github'|'json'|'junit'|'null'|'html', string> | ReporterDescription[];
   use?: UseOptions<TestArgs, WorkerArgs>;
   webServer?: TestConfigWebServer | TestConfigWebServer[];
+  otelCollector?: TestConfigOtelCollector;
 }
 
 export interface Config<TestArgs = {}, WorkerArgs = {}> extends TestConfig<TestArgs, WorkerArgs> {
