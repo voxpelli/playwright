@@ -270,6 +270,19 @@ export type NameValue = {
   value: string,
 };
 
+export type ServerSpan = {
+  traceId: string,
+  spanId: string,
+  parentSpanId?: string,
+  name: string,
+  startTime: number,
+  endTime: number,
+  status: 'ok' | 'error' | 'unset',
+  errorMessage?: string,
+  attributes?: any,
+  resource?: any,
+};
+
 export type IndexedDBDatabase = {
   name: string,
   version: number,
@@ -4472,6 +4485,8 @@ export interface TracingChannel extends TracingEventTarget, Channel {
   tracingStartChunk(params: TracingTracingStartChunkParams, progress?: Progress): Promise<TracingTracingStartChunkResult>;
   tracingGroup(params: TracingTracingGroupParams, progress?: Progress): Promise<TracingTracingGroupResult>;
   tracingGroupEnd(params?: TracingTracingGroupEndParams, progress?: Progress): Promise<TracingTracingGroupEndResult>;
+  tracingGetContext(params?: TracingTracingGetContextParams, progress?: Progress): Promise<TracingTracingGetContextResult>;
+  tracingAddServerSpans(params: TracingTracingAddServerSpansParams, progress?: Progress): Promise<TracingTracingAddServerSpansResult>;
   tracingStopChunk(params: TracingTracingStopChunkParams, progress?: Progress): Promise<TracingTracingStopChunkResult>;
   tracingStop(params?: TracingTracingStopParams, progress?: Progress): Promise<TracingTracingStopResult>;
 }
@@ -4480,12 +4495,14 @@ export type TracingTracingStartParams = {
   snapshots?: boolean,
   screenshots?: boolean,
   live?: boolean,
+  traceContext?: boolean,
 };
 export type TracingTracingStartOptions = {
   name?: string,
   snapshots?: boolean,
   screenshots?: boolean,
   live?: boolean,
+  traceContext?: boolean,
 };
 export type TracingTracingStartResult = void;
 export type TracingTracingStartChunkParams = {
@@ -4518,6 +4535,19 @@ export type TracingTracingGroupResult = void;
 export type TracingTracingGroupEndParams = {};
 export type TracingTracingGroupEndOptions = {};
 export type TracingTracingGroupEndResult = void;
+export type TracingTracingGetContextParams = {};
+export type TracingTracingGetContextOptions = {};
+export type TracingTracingGetContextResult = {
+  traceId?: string,
+  spanId?: string,
+};
+export type TracingTracingAddServerSpansParams = {
+  spans: ServerSpan[],
+};
+export type TracingTracingAddServerSpansOptions = {
+
+};
+export type TracingTracingAddServerSpansResult = void;
 export type TracingTracingStopChunkParams = {
   mode: 'archive' | 'discard' | 'entries',
 };

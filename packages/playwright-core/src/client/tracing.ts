@@ -37,7 +37,7 @@ export class Tracing extends ChannelOwner<channels.TracingChannel> implements ap
     super(parent, type, guid, initializer);
   }
 
-  async start(options: { name?: string, title?: string, snapshots?: boolean, screenshots?: boolean, sources?: boolean, live?: boolean } = {}) {
+  async start(options: { name?: string, title?: string, snapshots?: boolean, screenshots?: boolean, sources?: boolean, live?: boolean, traceContext?: boolean } = {}) {
     await this._wrapApiCall(async () => {
       this._includeSources = !!options.sources;
       this._isLive = !!options.live;
@@ -46,6 +46,7 @@ export class Tracing extends ChannelOwner<channels.TracingChannel> implements ap
         snapshots: options.snapshots,
         screenshots: options.screenshots,
         live: options.live,
+        traceContext: options.traceContext,
       });
       const { traceName } = await this._channel.tracingStartChunk({ name: options.name, title: options.title });
       await this._startCollectingStacks(traceName, this._isLive);
@@ -68,6 +69,18 @@ export class Tracing extends ChannelOwner<channels.TracingChannel> implements ap
 
   async groupEnd() {
     await this._channel.tracingGroupEnd();
+  }
+
+  async getContext(): Promise<{ traceId: string | null, spanId: string | null }> {
+    const result = await this._channel.tracingGetContext();
+    return {
+      traceId: result.traceId ?? null,
+      spanId: result.spanId ?? null,
+    };
+  }
+
+  async addServerSpans(spans: channels.ServerSpan[]): Promise<void> {
+    await this._channel.tracingAddServerSpans({ spans });
   }
 
   private async _startCollectingStacks(traceName: string, live: boolean) {

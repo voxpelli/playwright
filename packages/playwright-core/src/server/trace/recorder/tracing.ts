@@ -45,7 +45,7 @@ import type { Download } from '../../download';
 import type { APIRequestContext } from '../../fetch';
 import type { HarTracerDelegate } from '../../har/harTracer';
 import type { CallMetadata, InstrumentationListener } from '../../instrumentation';
-import type { StackFrame, TracingTracingStopChunkParams } from '@protocol/channels';
+import type { ServerSpan, StackFrame, TracingTracingStopChunkParams } from '@protocol/channels';
 import type * as har from '@trace/har';
 import type { FrameSnapshot } from '@trace/snapshot';
 import type * as trace from '@trace/trace';
@@ -53,13 +53,14 @@ import type { Progress } from '@protocol/progress';
 import type * as types from '../../types';
 import type { Screencast, ScreencastClient } from '../../screencast';
 
-const version: trace.VERSION = 8;
+const version: trace.VERSION = 9;
 
 export type TracerOptions = {
   name?: string;
   snapshots?: boolean;
   screenshots?: boolean;
   live?: boolean;
+  traceContext?: boolean;
 };
 
 type RecordingState = {
@@ -75,6 +76,8 @@ type RecordingState = {
   recording: boolean;
   callIds: Set<string>;
   groupStack: string[];
+  traceId?: string;
+  traceRootSpanId?: string;
 };
 
 export class Tracing extends SdkObject implements InstrumentationListener, SnapshotterDelegate, HarTracerDelegate {
@@ -191,6 +194,15 @@ export class Tracing extends SdkObject implements InstrumentationListener, Snaps
     this._state.recording = true;
     this._state.callIds.clear();
 
+    // Generate W3C Trace Context IDs for this chunk when traceContext is enabled.
+    if (this._state.options.traceContext) {
+      this._state.traceId = createGuid();
+      this._state.traceRootSpanId = createGuid().substring(0, 16);
+    } else {
+      this._state.traceId = undefined;
+      this._state.traceRootSpanId = undefined;
+    }
+
     // - Browser context network trace is shared across chunks as it contains resources
     // used to serve page snapshots, so make a copy with the new name.
     // - APIRequestContext network traces are chunk-specific, always start from scratch.
@@ -207,7 +219,8 @@ export class Tracing extends SdkObject implements InstrumentationListener, Snaps
       ...this._contextCreatedEvent,
       title: options.title,
       wallTime: Date.now(),
-      monotonicTime: monotonicTime()
+      monotonicTime: monotonicTime(),
+      traceId: this._state.traceId,
     };
     this._appendTraceEvent(event);
 
@@ -331,6 +344,34 @@ export class Tracing extends SdkObject implements InstrumentationListener, Snaps
   async deleteTmpTracesDir() {
     if (this._tracesTmpDir)
       await removeFolders([this._tracesTmpDir]);
+  }
+
+  getContext(): { traceId: string | undefined, spanId: string | undefined } {
+    return {
+      traceId: this._state?.traceId,
+      spanId: this._state?.traceRootSpanId,
+    };
+  }
+
+  addServerSpans(spans: ServerSpan[]) {
+    if (!this._state?.recording)
+      return;
+    for (const span of spans) {
+      const event: trace.ServerSpanTraceEvent = {
+        type: 'server-span',
+        traceId: span.traceId,
+        spanId: span.spanId,
+        parentSpanId: span.parentSpanId,
+        name: span.name,
+        startTime: span.startTime,
+        endTime: span.endTime,
+        status: span.status,
+        errorMessage: span.errorMessage,
+        attributes: span.attributes as Record<string, string | number | boolean> | undefined,
+        resource: span.resource as Record<string, string | number | boolean> | undefined,
+      };
+      this._appendTraceEvent(event);
+    }
   }
 
   private _createTracesDirIfNeeded() {
@@ -461,7 +502,8 @@ export class Tracing extends SdkObject implements InstrumentationListener, Snaps
 
   onBeforeCall(sdkObject: SdkObject, metadata: CallMetadata, parentId?: string) {
     // IMPORTANT: no awaits in this method, this._appendTraceEvent must be called synchronously.
-    const event = createBeforeActionTraceEvent(metadata, parentId ?? this._currentGroupId());
+    const spanId = this._state?.traceId ? createGuid().substring(0, 16) : undefined;
+    const event = createBeforeActionTraceEvent(metadata, parentId ?? this._currentGroupId(), spanId);
     if (!event)
       return Promise.resolve();
     this._temporarilyDisableThrottling(sdkObject.attribution.page);
@@ -690,7 +732,7 @@ function visitTraceEvent(object: any, sha1s: Set<string>): any {
   return object;
 }
 
-function createBeforeActionTraceEvent(metadata: CallMetadata, parentId?: string): trace.BeforeActionTraceEvent | null {
+function createBeforeActionTraceEvent(metadata: CallMetadata, parentId?: string, spanId?: string): trace.BeforeActionTraceEvent | null {
   if (metadata.internal || metadata.method.startsWith('tracing'))
     return null;
   const event: trace.BeforeActionTraceEvent = {
@@ -706,6 +748,8 @@ function createBeforeActionTraceEvent(metadata: CallMetadata, parentId?: string)
   };
   if (parentId)
     event.parentId = parentId;
+  if (spanId)
+    event.spanId = spanId;
   return event;
 }
 

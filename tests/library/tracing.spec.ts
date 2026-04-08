@@ -887,3 +887,104 @@ function relativeStack(action: ActionTraceEvent, stacks: Map<string, StackFrame[
   const stack = stacks.get(action.callId) || [];
   return stack.map(f => f.file.replace(__dirname + path.sep, ''));
 }
+
+test('should expose trace context when traceContext is enabled', async ({ context, page, server }, testInfo) => {
+  await context.tracing.start({ traceContext: true });
+
+  const ctx = await context.tracing.getContext();
+  expect(ctx.traceId).toMatch(/^[0-9a-f]{32}$/);
+  expect(ctx.spanId).toMatch(/^[0-9a-f]{16}$/);
+
+  await context.tracing.stop({ path: testInfo.outputPath('trace.zip') });
+
+  const { events } = await parseTraceRaw(testInfo.outputPath('trace.zip'));
+  const contextOptions = events.find(e => e.type === 'context-options');
+  expect(contextOptions.traceId).toBe(ctx.traceId);
+});
+
+test('should not expose trace context when traceContext is disabled', async ({ context, page }, testInfo) => {
+  await context.tracing.start();
+  const ctx = await context.tracing.getContext();
+  expect(ctx.traceId).toBeNull();
+  expect(ctx.spanId).toBeNull();
+  await context.tracing.stop({ path: testInfo.outputPath('trace.zip') });
+});
+
+test('should generate fresh traceId per chunk', async ({ context, page }, testInfo) => {
+  await context.tracing.start({ traceContext: true });
+
+  const ctx1 = await context.tracing.getContext();
+  expect(ctx1.traceId).toMatch(/^[0-9a-f]{32}$/);
+
+  await context.tracing.stopChunk({ path: testInfo.outputPath('trace1.zip') });
+  await context.tracing.startChunk();
+
+  const ctx2 = await context.tracing.getContext();
+  expect(ctx2.traceId).toMatch(/^[0-9a-f]{32}$/);
+  expect(ctx2.traceId).not.toBe(ctx1.traceId);
+
+  await context.tracing.stop({ path: testInfo.outputPath('trace2.zip') });
+});
+
+test('should emit spanId on before events when traceContext is enabled', async ({ context, page, server }, testInfo) => {
+  await context.tracing.start({ traceContext: true });
+  await page.goto(server.EMPTY_PAGE);
+  await context.tracing.stop({ path: testInfo.outputPath('trace.zip') });
+
+  const { events } = await parseTraceRaw(testInfo.outputPath('trace.zip'));
+  const beforeEvents = events.filter(e => e.type === 'before');
+  expect(beforeEvents.length).toBeGreaterThan(0);
+  for (const event of beforeEvents)
+    expect(event.spanId).toMatch(/^[0-9a-f]{16}$/);
+});
+
+test('should add server spans to trace', async ({ context }, testInfo) => {
+  await context.tracing.start({ traceContext: true });
+  const { traceId } = await context.tracing.getContext();
+
+  await context.tracing.addServerSpans([{
+    traceId: traceId!,
+    spanId: 'abcdef1234567890',
+    name: 'Test server span',
+    startTime: Date.now() - 100,
+    endTime: Date.now(),
+    status: 'ok',
+  }]);
+
+  await context.tracing.stop({ path: testInfo.outputPath('trace.zip') });
+
+  const { events } = await parseTraceRaw(testInfo.outputPath('trace.zip'));
+  const serverSpan = events.find(e => e.type === 'server-span');
+  expect(serverSpan).toBeTruthy();
+  expect(serverSpan.name).toBe('Test server span');
+  expect(serverSpan.traceId).toBe(traceId);
+  expect(serverSpan.spanId).toBe('abcdef1234567890');
+  expect(serverSpan.status).toBe('ok');
+});
+
+test('should record server span error details in trace', async ({ context }, testInfo) => {
+  await context.tracing.start({ traceContext: true });
+  const { traceId } = await context.tracing.getContext();
+
+  await context.tracing.addServerSpans([{
+    traceId: traceId!,
+    spanId: 'abcdef1234567890',
+    name: 'Failed database query',
+    startTime: Date.now() - 100,
+    endTime: Date.now(),
+    status: 'error',
+    errorMessage: 'Connection refused',
+    resource: { 'service.name': 'postgres' },
+    attributes: { 'db.statement': 'SELECT * FROM users' },
+  }]);
+
+  await context.tracing.stop({ path: testInfo.outputPath('trace.zip') });
+
+  const { events } = await parseTraceRaw(testInfo.outputPath('trace.zip'));
+  const serverSpan = events.find(e => e.type === 'server-span');
+  expect(serverSpan).toBeTruthy();
+  expect(serverSpan.status).toBe('error');
+  expect(serverSpan.errorMessage).toBe('Connection refused');
+  expect(serverSpan.resource['service.name']).toBe('postgres');
+  expect(serverSpan.attributes['db.statement']).toBe('SELECT * FROM users');
+});

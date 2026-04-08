@@ -184,6 +184,17 @@ When enabled, the trace is written to an unarchived file that is updated in real
 instead of caching changes and archiving them into a zip file at the end. This is useful for live trace
 viewing during test execution.
 
+### option: Tracing.start.traceContext
+* since: v1.60
+* langs: js
+- `traceContext` <[boolean]>
+
+When enabled, Playwright will generate a [W3C Trace Context](https://www.w3.org/TR/trace-context/)
+`traceId` per trace chunk and a `spanId` per action. These IDs can be retrieved with
+[`method: Tracing.getContext`] and used to correlate Playwright actions with server-side traces
+(e.g., OpenTelemetry spans). Server-side spans can be added to the trace with
+[`method: Tracing.addServerSpans`] and will appear in the Trace Viewer.
+
 ## async method: Tracing.startChunk
 * since: v1.15
 
@@ -302,6 +313,78 @@ If specified, intermediate trace files are going to be saved into the files with
 given name prefix inside the [`option: BrowserType.launch.tracesDir`] directory specified in [`method: BrowserType.launch`].
 To specify the final trace zip file name, you need to pass `path` option to
 [`method: Tracing.stopChunk`] instead.
+
+## async method: Tracing.addServerSpans
+* since: v1.60
+* langs: js
+
+Adds server-side spans to the current trace. This allows correlating Playwright actions with
+server-side operations (e.g., database queries, API calls) instrumented with OpenTelemetry.
+
+Server spans with `status: 'error'` will appear in the Trace Viewer's Errors tab alongside
+browser-side errors, making it easier to diagnose failures that originate on the server.
+
+Use [`method: Tracing.getContext`] to obtain the `traceId` to pass to your server instrumentation.
+
+**Usage**
+
+```js
+const { traceId } = await context.tracing.getContext();
+
+// In your server fixture, instrument with OpenTelemetry and collect spans.
+// After the test, add the collected spans to the trace:
+await context.tracing.addServerSpans([
+  {
+    traceId,
+    spanId: 'abcdef1234567890',
+    name: 'SELECT users WHERE id = ?',
+    startTime: Date.now() - 50,
+    endTime: Date.now(),
+    status: 'ok',
+    resource: { 'service.name': 'database' },
+  },
+]);
+```
+
+### param: Tracing.addServerSpans.spans
+* since: v1.60
+- `spans` <[Array]<[Object]>>
+  - `traceId` <[string]> W3C 128-bit trace ID (32 lowercase hex characters). Should match the value from [`method: Tracing.getContext`].
+  - `spanId` <[string]> W3C 64-bit span ID (16 lowercase hex characters).
+  - `parentSpanId` ?<[string]> W3C span ID of the parent span, if any.
+  - `name` <[string]> Human-readable name describing the server-side operation.
+  - `startTime` <[float]> Start time in milliseconds since the Unix epoch.
+  - `endTime` <[float]> End time in milliseconds since the Unix epoch.
+  - `status` <[string]<"ok"|"error"|"unset">> Outcome of the span. Spans with `'error'` status and a non-empty `errorMessage` will appear in the Trace Viewer's Errors tab.
+  - `errorMessage` ?<[string]> Error message to display in the Trace Viewer when `status` is `'error'`.
+  - `attributes` ?<[Object]<[string], [string]|[float]|[boolean]>> OpenTelemetry span attributes.
+  - `resource` ?<[Object]<[string], [string]|[float]|[boolean]>> OpenTelemetry resource attributes (e.g., `{ 'service.name': 'api-server' }`). The `service.name` attribute is used as a label in the Trace Viewer.
+
+## async method: Tracing.getContext
+* since: v1.60
+* langs: js
+- returns: <[Object]>
+  - `traceId` <[null]|[string]> W3C 128-bit trace ID (32 lowercase hex characters), or `null` if tracing is not active or `traceContext` was not enabled.
+  - `spanId` <[null]|[string]> W3C 64-bit span ID (16 lowercase hex characters) for the root span of this trace chunk, or `null` if tracing is not active or `traceContext` was not enabled.
+
+Returns the current W3C Trace Context identifiers for the active trace chunk. These can be used to
+propagate the trace context to server-side instrumentation (e.g., as HTTP headers or OpenTelemetry
+context), enabling correlation between Playwright actions and server-side spans.
+
+Enable `traceContext` in [`method: Tracing.start`] to activate trace context generation.
+
+**Usage**
+
+```js
+await context.tracing.start({ traceContext: true });
+
+// Get the trace context to pass to your server fixtures.
+const { traceId, spanId } = await context.tracing.getContext();
+
+// Use traceId / spanId in server API calls or test fixtures to associate
+// server-side OpenTelemetry spans with this Playwright trace.
+await myServerClient.setTraceContext(traceId);
+```
 
 ## async method: Tracing.group
 * since: v1.49

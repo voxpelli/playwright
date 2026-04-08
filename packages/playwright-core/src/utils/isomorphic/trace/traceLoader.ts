@@ -152,6 +152,7 @@ function createEmptyContext(): ContextEntry {
     events: [],
     errors: [],
     stdio: [],
+    serverSpans: [],
     hasSource: false,
     contextId: '',
   };

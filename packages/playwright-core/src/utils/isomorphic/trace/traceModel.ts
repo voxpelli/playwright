@@ -80,6 +80,7 @@ export class TraceModel {
   readonly events: (trace.EventTraceEvent | trace.ConsoleMessageTraceEvent)[];
   readonly stdio: trace.StdioTraceEvent[];
   readonly errors: trace.ErrorTraceEvent[];
+  readonly serverSpans: trace.ServerSpanTraceEvent[];
   readonly errorDescriptors: ErrorDescription[];
   readonly hasSource: boolean;
   readonly hasStepData: boolean;
@@ -115,6 +116,7 @@ export class TraceModel {
     this.events = ([] as (trace.EventTraceEvent | trace.ConsoleMessageTraceEvent)[]).concat(...contexts.map(c => c.events));
     this.stdio = ([] as trace.StdioTraceEvent[]).concat(...contexts.map(c => c.stdio));
     this.errors = ([] as trace.ErrorTraceEvent[]).concat(...contexts.map(c => c.errors));
+    this.serverSpans = ([] as trace.ServerSpanTraceEvent[]).concat(...contexts.map(c => c.serverSpans));
     this.hasSource = contexts.some(c => c.hasSource);
     this.hasStepData = contexts.some(context => context.origin === 'testRunner');
     this.resources = [...contexts.map(c => c.resources)].flat().map(entry => ({ ...entry, id: `${entry.pageref}-${entry.startedDateTime}-${entry.request.url}` }));
@@ -175,14 +177,31 @@ export class TraceModel {
         message: action.error.message,
       });
     }
+    for (const span of this.serverSpans) {
+      if (span.status === 'error' && span.errorMessage) {
+        const serviceName = (span.resource?.['service.name'] as string | undefined) ?? 'server';
+        errors.push({
+          message: `[${serviceName}] ${span.name}: ${span.errorMessage}`,
+        });
+      }
+    }
     return errors;
   }
 
   private _errorDescriptorsFromTestRunner(): ErrorDescription[] {
-    return this.errors.filter(e => !!e.message).map((error, i) => ({
+    const errors: ErrorDescription[] = this.errors.filter(e => !!e.message).map((error, i) => ({
       stack: error.stack,
       message: error.message,
     }));
+    for (const span of this.serverSpans) {
+      if (span.status === 'error' && span.errorMessage) {
+        const serviceName = (span.resource?.['service.name'] as string | undefined) ?? 'server';
+        errors.push({
+          message: `[${serviceName}] ${span.name}: ${span.errorMessage}`,
+        });
+      }
+    }
+    return errors;
   }
 }
 
@@ -465,5 +484,6 @@ const kFakeRootAction: ActionTraceEventInContext = {
     errors: [],
     hasSource: false,
     contextId: '',
+    serverSpans: [],
   },
 };

@@ -235,6 +235,25 @@ NameValue:
     name: string
     value: string
 
+ServerSpan:
+  type: object
+  properties:
+    traceId: string
+    spanId: string
+    parentSpanId: string?
+    name: string
+    startTime: float
+    endTime: float
+    status:
+      type: enum
+      literals:
+      - ok
+      - error
+      - unset
+    errorMessage: string?
+    attributes: json?
+    resource: json?
+
 IndexedDBDatabase:
   type: object
   properties:
@@ -3976,6 +3995,7 @@ Tracing:
         snapshots: boolean?
         screenshots: boolean?
         live: boolean?
+        traceContext: boolean?
 
     tracingStartChunk:
       title: Start tracing
@@ -3999,6 +4019,19 @@ Tracing:
 
     tracingGroupEnd:
       title: Group end
+
+    tracingGetContext:
+      title: Get trace context
+      returns:
+        traceId: string?
+        spanId: string?
+
+    tracingAddServerSpans:
+      title: Add server spans to trace
+      parameters:
+        spans:
+          type: array
+          items: ServerSpan
 
     tracingStopChunk:
       title: Stop tracing

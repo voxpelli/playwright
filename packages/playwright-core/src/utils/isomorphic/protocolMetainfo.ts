@@ -287,6 +287,8 @@ export const methodMetainfo = new Map<string, MethodMetainfo>([
   ['Tracing.tracingStartChunk', { title: 'Start tracing', group: 'configuration', }],
   ['Tracing.tracingGroup', { title: 'Trace "{name}"', }],
   ['Tracing.tracingGroupEnd', { title: 'Group end', }],
+  ['Tracing.tracingGetContext', { title: 'Get trace context', }],
+  ['Tracing.tracingAddServerSpans', { title: 'Add server spans to trace', }],
   ['Tracing.tracingStopChunk', { title: 'Stop tracing', group: 'configuration', }],
   ['Tracing.tracingStop', { title: 'Stop tracing', group: 'configuration', }],
   ['Artifact.pathAfterFinished', { internal: true, }],
