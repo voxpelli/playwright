@@ -166,17 +166,8 @@ export class TraceModel {
     return actionTree;
   }
 
-  private _errorDescriptorsFromActions(): ErrorDescription[] {
+  private _serverSpanErrors(): ErrorDescription[] {
     const errors: ErrorDescription[] = [];
-    for (const action of this.actions || []) {
-      if (!action.error?.message)
-        continue;
-      errors.push({
-        action,
-        stack: action.stack,
-        message: action.error.message,
-      });
-    }
     for (const span of this.serverSpans) {
       if (span.status === 'error' && span.errorMessage) {
         const serviceName = (span.resource?.['service.name'] as string | undefined) ?? 'server';
@@ -188,20 +179,26 @@ export class TraceModel {
     return errors;
   }
 
+  private _errorDescriptorsFromActions(): ErrorDescription[] {
+    const errors: ErrorDescription[] = [];
+    for (const action of this.actions || []) {
+      if (!action.error?.message)
+        continue;
+      errors.push({
+        action,
+        stack: action.stack,
+        message: action.error.message,
+      });
+    }
+    return [...errors, ...this._serverSpanErrors()];
+  }
+
   private _errorDescriptorsFromTestRunner(): ErrorDescription[] {
     const errors: ErrorDescription[] = this.errors.filter(e => !!e.message).map((error, i) => ({
       stack: error.stack,
       message: error.message,
     }));
-    for (const span of this.serverSpans) {
-      if (span.status === 'error' && span.errorMessage) {
-        const serviceName = (span.resource?.['service.name'] as string | undefined) ?? 'server';
-        errors.push({
-          message: `[${serviceName}] ${span.name}: ${span.errorMessage}`,
-        });
-      }
-    }
-    return errors;
+    return [...errors, ...this._serverSpanErrors()];
   }
 }
 

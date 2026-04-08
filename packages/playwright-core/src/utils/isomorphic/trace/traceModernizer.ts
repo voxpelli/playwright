@@ -34,7 +34,8 @@ export class TraceVersionError extends Error {
 
 // 6 => 10/2023 ~1.40
 // 7 => 05/2024 ~1.45
-// 9 => 04/2026 ~1.60 (server-side traces)
+// 8 => 09/2024 ~1.48 (stepId on before/action events, title replaces apiName)
+// 9 => 04/2026 ~1.60 (server-side traces: traceId, spanId, server-span events)
 const latestVersion: trace.VERSION = 9;
 
 export class TraceModernizer {
