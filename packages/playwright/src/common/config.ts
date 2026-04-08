@@ -142,7 +142,7 @@ export class FullConfigInternal {
       this.webServers = [];
     }
 
-    const otelCollectors = takeFirst((userConfig as any).otelCollector, null);
+    const otelCollectors = takeFirst(userConfig.otelCollector, null);
     if (Array.isArray(otelCollectors))
       this.otelCollectors = otelCollectors;
     else if (otelCollectors)

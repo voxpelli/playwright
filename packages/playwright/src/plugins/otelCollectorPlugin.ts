@@ -232,7 +232,8 @@ export class OtelCollectorPlugin implements TestRunnerPlugin {
           this._ingestPayload(payload);
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end('{}');
-        } catch {
+        } catch (e) {
+          this._reporter?.onStdErr?.(colors.dim(`[${this._options.name ?? 'OtelCollector'}] `) + `Failed to parse OTLP payload: ${e}\n`);
           res.writeHead(400);
           res.end();
         }
@@ -245,11 +246,10 @@ export class OtelCollectorPlugin implements TestRunnerPlugin {
       const resource = decodeAttributes(resourceSpan.resource?.attributes);
       for (const scopeSpan of resourceSpan.scopeSpans ?? []) {
         for (const span of scopeSpan.spans ?? []) {
-          const traceId = span.traceId ?? '';
-          if (!traceId)
+          if (!span.traceId)
             continue;
           const otelSpan: OtelSpan = {
-            traceId,
+            traceId: span.traceId,
             spanId: span.spanId ?? '',
             parentSpanId: span.parentSpanId || undefined,
             name: span.name ?? '',
