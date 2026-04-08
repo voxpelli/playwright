@@ -836,11 +836,7 @@ async function _drainOtelSpansIntoTracing(tracing: Tracing) {
 
 function _httpPost<T>(url: string, body: string): Promise<T> {
   return new Promise((resolve, reject) => {
-    const urlObj = new URL(url);
-    const req = http.request({
-      hostname: urlObj.hostname,
-      port: urlObj.port,
-      path: urlObj.pathname,
+    const req = http.request(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
     }, res => {

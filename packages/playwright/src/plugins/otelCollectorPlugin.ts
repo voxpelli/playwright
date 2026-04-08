@@ -96,15 +96,18 @@ export type OtelSpan = {
 function nanoToMs(nano: string | number | undefined): number {
   if (nano === undefined)
     return 0;
-  // BigInt only accepts integer strings; guard against fractional strings from some SDKs.
-  const asNumber = Number(nano);
-  if (!Number.isFinite(asNumber))
-    return 0;
-  try {
-    return Number(BigInt(Math.floor(asNumber)) / 1000000n);
-  } catch {
-    return Math.floor(asNumber / 1e6);
+  const str = String(nano);
+  // Integer nanosecond strings: use BigInt directly to preserve precision for large epoch values.
+  if (/^\d+$/.test(str)) {
+    try {
+      return Number(BigInt(str) / 1000000n);
+    } catch {
+      return 0;
+    }
   }
+  // Fractional nanosecond strings from some SDKs: use float arithmetic.
+  const asNumber = Number(str);
+  return Number.isFinite(asNumber) ? Math.floor(asNumber / 1e6) : 0;
 }
 
 function decodeAttributes(attrs: OtlpKeyValue[] | undefined): Record<string, unknown> | undefined {
