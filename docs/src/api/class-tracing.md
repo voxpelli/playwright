@@ -321,8 +321,11 @@ To specify the final trace zip file name, you need to pass `path` option to
 Adds server-side spans to the current trace. This allows correlating Playwright actions with
 server-side operations (e.g., database queries, API calls) instrumented with OpenTelemetry.
 
-Server spans with `status: 'error'` will appear in the Trace Viewer's Errors tab alongside
-browser-side errors, making it easier to diagnose failures that originate on the server.
+All server spans appear in the Trace Viewer's **Server** tab, which shows span name, service name,
+duration, and status. Spans are also shown as coloured bars in the timeline, making it easy to
+correlate server-side activity with browser actions. Additionally, spans with `status: 'error'`
+appear in the **Errors** tab alongside browser-side errors, making it easier to diagnose failures
+that originate on the server.
 
 Use [`method: Tracing.getContext`] to obtain the `traceId` to pass to your server instrumentation.
 
@@ -355,7 +358,7 @@ await context.tracing.addServerSpans([
   - `name` <[string]> Human-readable name describing the server-side operation.
   - `startTime` <[float]> Start time in milliseconds since the Unix epoch.
   - `endTime` <[float]> End time in milliseconds since the Unix epoch.
-  - `status` <[string]<"ok"|"error"|"unset">> Outcome of the span. Spans with `'error'` status and a non-empty `errorMessage` will appear in the Trace Viewer's Errors tab.
+  - `status` <[string]<"ok"|"error"|"unset">> Outcome of the span. All spans appear in the Trace Viewer's **Server** tab. Spans with `'error'` status and a non-empty `errorMessage` also appear in the **Errors** tab.
   - `errorMessage` ?<[string]> Error message to display in the Trace Viewer when `status` is `'error'`.
   - `attributes` ?<[Object]<[string], [string]|[float]|[boolean]>> OpenTelemetry span attributes.
   - `resource` ?<[Object]<[string], [string]|[float]|[boolean]>> OpenTelemetry resource attributes (e.g., `{ 'service.name': 'api-server' }`). The `service.name` attribute is used as a label in the Trace Viewer.
