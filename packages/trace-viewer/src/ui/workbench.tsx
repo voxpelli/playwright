@@ -23,6 +23,7 @@ import { ErrorsTab, useErrorsTabModel } from './errorsTab';
 import { ConsoleTab, useConsoleTabModel } from './consoleTab';
 import type { TraceModel, SourceLocation, ActionTraceEventInContext, SourceModel } from '@isomorphic/trace/traceModel';
 import { NetworkTab, useNetworkTabModel } from './networkTab';
+import { ServerSpansTab, useServerSpansTabModel } from './serverSpansTab';
 import { SnapshotTabsView } from './snapshotTab';
 import { SourceTab } from './sourceTab';
 import { TabbedPane } from '@web/components/tabbedPane';
@@ -195,6 +196,7 @@ const PartitionedWorkbench: React.FunctionComponent<WorkbenchProps & { partition
   const consoleModel = useConsoleTabModel(model, selectedTime);
   const networkModel = useNetworkTabModel(model, selectedTime);
   const errorsModel = useErrorsTabModel(model);
+  const serverSpansModel = useServerSpansTabModel(model);
 
   const revealedStack = React.useMemo(() => {
     if (revealedErrorKey !== undefined)
@@ -280,6 +282,14 @@ const PartitionedWorkbench: React.FunctionComponent<WorkbenchProps & { partition
     render: () => <AttachmentsTab revealedAttachmentCallId={revealedAttachmentCallId} />
   };
 
+  const serverSpansTab: TabbedPaneTabModel = {
+    id: 'server',
+    title: 'Server',
+    count: serverSpansModel.spans.length || undefined,
+    errorCount: serverSpansModel.errorCount || undefined,
+    render: () => <ServerSpansTab serverSpansModel={serverSpansModel} />
+  };
+
   const tabs: TabbedPaneTabModel[] = [
     inspectorTab,
     callTab,
@@ -290,6 +300,9 @@ const PartitionedWorkbench: React.FunctionComponent<WorkbenchProps & { partition
     sourceTab,
     attachmentsTab,
   ];
+
+  if (serverSpansModel.spans.length)
+    tabs.push(serverSpansTab);
 
   if (annotations !== undefined) {
     const annotationsTab: TabbedPaneTabModel = {

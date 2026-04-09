@@ -136,6 +136,18 @@ scheme.NameValue = tObject({
   name: tString,
   value: tString,
 });
+scheme.ServerSpan = tObject({
+  traceId: tString,
+  spanId: tString,
+  parentSpanId: tOptional(tString),
+  name: tString,
+  startTime: tFloat,
+  endTime: tFloat,
+  status: tEnum(['ok', 'error', 'unset']),
+  errorMessage: tOptional(tString),
+  attributes: tOptional(tAny),
+  resource: tOptional(tAny),
+});
 scheme.IndexedDBDatabase = tObject({
   name: tString,
   version: tInt,
@@ -2580,6 +2592,7 @@ scheme.TracingTracingStartParams = tObject({
   snapshots: tOptional(tBoolean),
   screenshots: tOptional(tBoolean),
   live: tOptional(tBoolean),
+  traceContext: tOptional(tBoolean),
 });
 scheme.TracingTracingStartResult = tOptional(tObject({}));
 scheme.TracingTracingStartChunkParams = tObject({
@@ -2600,6 +2613,15 @@ scheme.TracingTracingGroupParams = tObject({
 scheme.TracingTracingGroupResult = tOptional(tObject({}));
 scheme.TracingTracingGroupEndParams = tOptional(tObject({}));
 scheme.TracingTracingGroupEndResult = tOptional(tObject({}));
+scheme.TracingTracingGetContextParams = tOptional(tObject({}));
+scheme.TracingTracingGetContextResult = tObject({
+  traceId: tOptional(tString),
+  spanId: tOptional(tString),
+});
+scheme.TracingTracingAddServerSpansParams = tObject({
+  spans: tArray(tType('ServerSpan')),
+});
+scheme.TracingTracingAddServerSpansResult = tOptional(tObject({}));
 scheme.TracingTracingStopChunkParams = tObject({
   mode: tEnum(['archive', 'discard', 'entries']),
 });

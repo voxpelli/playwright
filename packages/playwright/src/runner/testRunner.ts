@@ -28,6 +28,7 @@ import { loadConfig } from '../common/configLoader';
 import { FSWatcher } from './fsWatcher';
 import { baseFullConfig } from '../isomorphic/teleReceiver';
 import { addGitCommitInfoPlugin } from '../plugins/gitCommitInfoPlugin';
+import { otelCollectorPluginsForConfig } from '../plugins/otelCollectorPlugin';
 import { webServerPluginsForConfig } from '../plugins/webServerPlugin';
 import { internalScreen } from '../reporters/base';
 import { InternalReporter } from '../reporters/internalReporter';
@@ -388,6 +389,7 @@ export class TestRunner extends EventEmitter<TestRunnerEventMap> {
       // Preserve plugin instances between setup and build.
       if (!this._plugins) {
         webServerPluginsForConfig(config).forEach(p => config.plugins.push({ factory: p }));
+        otelCollectorPluginsForConfig(config).forEach(p => config.plugins.push({ factory: p }));
         addGitCommitInfoPlugin(config);
         this._plugins = config.plugins || [];
       } else {
@@ -440,6 +442,7 @@ export async function runAllTestsWithConfig(config: FullConfigInternal): Promise
 
   // Legacy webServer support.
   webServerPluginsForConfig(config).forEach(p => config.plugins.push({ factory: p }));
+  otelCollectorPluginsForConfig(config).forEach(p => config.plugins.push({ factory: p }));
 
   const reporters = await createReporters(config, listOnly ? 'list' : 'test');
   const lastRun = new LastRunReporter(config);

@@ -21,6 +21,7 @@ import type * as traceV5 from './versions/traceV5';
 import type * as traceV6 from './versions/traceV6';
 import type * as traceV7 from './versions/traceV7';
 import type * as traceV8 from './versions/traceV8';
+import type * as traceV9 from './versions/traceV9';
 import type { ActionEntry, ContextEntry, PageEntry } from './entries';
 import type { SnapshotStorage } from './snapshotStorage';
 
@@ -33,7 +34,9 @@ export class TraceVersionError extends Error {
 
 // 6 => 10/2023 ~1.40
 // 7 => 05/2024 ~1.45
-const latestVersion: trace.VERSION = 8;
+// 8 => 09/2024 ~1.48 (stepId on before/action events, title replaces apiName)
+// 9 => 04/2026 ~1.60 (server-side traces: traceId, spanId, server-span events)
+const latestVersion: trace.VERSION = 9;
 
 export class TraceModernizer {
   private _contextEntry: ContextEntry;
@@ -99,6 +102,7 @@ export class TraceModernizer {
         contextEntry.testIdAttributeName = event.testIdAttributeName;
         contextEntry.contextId = event.contextId ?? '';
         contextEntry.testTimeout = event.testTimeout;
+        contextEntry.traceId = event.traceId;
         break;
       }
       case 'screencast-frame': {
@@ -168,6 +172,9 @@ export class TraceModernizer {
         break;
       case 'frame-snapshot':
         this._snapshotStorage.addFrameSnapshot(this._contextEntry.contextId, event.snapshot, this._pageEntry(event.snapshot.pageId).screencastFrames);
+        break;
+      case 'server-span':
+        contextEntry.serverSpans.push(event);
         break;
     }
     // Make sure there is a page entry for each page, even without screencast frames,
@@ -437,5 +444,11 @@ export class TraceModernizer {
       }
     }
     return result;
+  }
+
+  _modernize_8_to_9(events: traceV8.TraceEvent[]): traceV9.TraceEvent[] {
+    // Version 9 adds optional traceId to context-options and optional spanId to before/action events.
+    // Old traces simply won't have these fields, which is fine since they are optional.
+    return events as traceV9.TraceEvent[];
   }
 }

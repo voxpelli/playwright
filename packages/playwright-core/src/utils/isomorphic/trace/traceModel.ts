@@ -80,6 +80,7 @@ export class TraceModel {
   readonly events: (trace.EventTraceEvent | trace.ConsoleMessageTraceEvent)[];
   readonly stdio: trace.StdioTraceEvent[];
   readonly errors: trace.ErrorTraceEvent[];
+  readonly serverSpans: trace.ServerSpanTraceEvent[];
   readonly errorDescriptors: ErrorDescription[];
   readonly hasSource: boolean;
   readonly hasStepData: boolean;
@@ -115,6 +116,7 @@ export class TraceModel {
     this.events = ([] as (trace.EventTraceEvent | trace.ConsoleMessageTraceEvent)[]).concat(...contexts.map(c => c.events));
     this.stdio = ([] as trace.StdioTraceEvent[]).concat(...contexts.map(c => c.stdio));
     this.errors = ([] as trace.ErrorTraceEvent[]).concat(...contexts.map(c => c.errors));
+    this.serverSpans = ([] as trace.ServerSpanTraceEvent[]).concat(...contexts.map(c => c.serverSpans));
     this.hasSource = contexts.some(c => c.hasSource);
     this.hasStepData = contexts.some(context => context.origin === 'testRunner');
     this.resources = [...contexts.map(c => c.resources)].flat().map(entry => ({ ...entry, id: `${entry.pageref}-${entry.startedDateTime}-${entry.request.url}` }));
@@ -164,6 +166,19 @@ export class TraceModel {
     return actionTree;
   }
 
+  private _serverSpanErrors(): ErrorDescription[] {
+    const errors: ErrorDescription[] = [];
+    for (const span of this.serverSpans) {
+      if (span.status === 'error' && span.errorMessage) {
+        const serviceName = (span.resource?.['service.name'] as string | undefined) ?? 'server';
+        errors.push({
+          message: `[${serviceName}] ${span.name}: ${span.errorMessage}`,
+        });
+      }
+    }
+    return errors;
+  }
+
   private _errorDescriptorsFromActions(): ErrorDescription[] {
     const errors: ErrorDescription[] = [];
     for (const action of this.actions || []) {
@@ -175,14 +190,15 @@ export class TraceModel {
         message: action.error.message,
       });
     }
-    return errors;
+    return [...errors, ...this._serverSpanErrors()];
   }
 
   private _errorDescriptorsFromTestRunner(): ErrorDescription[] {
-    return this.errors.filter(e => !!e.message).map((error, i) => ({
+    const errors: ErrorDescription[] = this.errors.filter(e => !!e.message).map((error, i) => ({
       stack: error.stack,
       message: error.message,
     }));
+    return [...errors, ...this._serverSpanErrors()];
   }
 }
 
@@ -317,6 +333,10 @@ function adjustMonotonicTime(contexts: ContextEntry[], monotonicTimeDelta: numbe
     for (const resource of context.resources) {
       if (resource._monotonicTime)
         resource._monotonicTime += monotonicTimeDelta;
+    }
+    for (const span of context.serverSpans) {
+      span.startTime += monotonicTimeDelta;
+      span.endTime += monotonicTimeDelta;
     }
   }
 }
@@ -465,5 +485,6 @@ const kFakeRootAction: ActionTraceEventInContext = {
     errors: [],
     hasSource: false,
     contextId: '',
+    serverSpans: [],
   },
 };

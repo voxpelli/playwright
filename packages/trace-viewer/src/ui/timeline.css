@@ -98,3 +98,30 @@
   border-left: 1px solid var(--vscode-panel-border);
   border-right: 1px solid var(--vscode-panel-border);
 }
+
+.timeline-server-spans-lane {
+  position: relative;
+  height: 14px;
+  flex: none;
+  margin-top: 2px;
+}
+
+.timeline-server-span-bar {
+  position: absolute;
+  top: 2px;
+  height: 10px;
+  border-radius: 2px;
+  opacity: 0.85;
+}
+
+.timeline-server-span-bar-ok {
+  background-color: #2ea043;
+}
+
+.timeline-server-span-bar-error {
+  background-color: var(--vscode-errorForeground, #f14c4c);
+}
+
+.timeline-server-span-bar-unset {
+  background-color: var(--vscode-badge-background, #999);
+}

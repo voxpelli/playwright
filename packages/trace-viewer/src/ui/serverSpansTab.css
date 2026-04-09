@@ -1,0 +1,106 @@
+/*
+  Copyright (c) Microsoft Corporation.
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+*/
+
+.server-span-row {
+  display: flex;
+  align-items: flex-start;
+  padding: 4px 10px;
+  border-bottom: 1px solid var(--vscode-panel-border);
+  gap: 8px;
+  flex-direction: column;
+}
+
+.server-span-row-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 24px;
+}
+
+.server-span-name {
+  flex: 1;
+  font-family: var(--vscode-editor-font-family);
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.server-span-service {
+  color: var(--vscode-editorCodeLens-foreground);
+  font-size: 12px;
+  flex: none;
+  white-space: nowrap;
+}
+
+.server-span-duration {
+  color: var(--vscode-editorCodeLens-foreground);
+  font-size: 12px;
+  flex: none;
+  text-align: end;
+  min-width: 48px;
+}
+
+.server-span-status {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 3px;
+  flex: none;
+  text-transform: uppercase;
+}
+
+.server-span-status-ok {
+  background-color: #2ea04326;
+  color: #2ea043;
+}
+
+.server-span-status-error {
+  background-color: var(--vscode-inputValidation-errorBackground);
+  color: var(--vscode-errorForeground);
+}
+
+.server-span-status-unset {
+  background-color: var(--vscode-badge-background);
+  color: var(--vscode-badge-foreground);
+}
+
+.server-span-error-message {
+  color: var(--vscode-errorForeground);
+  font-size: 12px;
+  word-break: break-word;
+  white-space: pre-wrap;
+  padding-left: 2px;
+}
+
+.server-span-attributes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding-left: 2px;
+}
+
+.server-span-attribute {
+  font-size: 11px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background-color: var(--vscode-badge-background);
+  color: var(--vscode-badge-foreground);
+  font-family: var(--vscode-editor-font-family);
+  white-space: nowrap;
+}

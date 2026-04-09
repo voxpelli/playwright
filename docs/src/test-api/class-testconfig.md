@@ -316,6 +316,29 @@ export default defineConfig({
 });
 ```
 
+## property: TestConfig.otelCollector
+* since: v1.60
+- type: ?<[Object]>
+  - `port` ?<[int]> The port to listen on for [OTLP/HTTP](https://opentelemetry.io/docs/specs/otlp/) JSON requests (`POST /v1/traces`). Defaults to `4318` (the standard OTLP/HTTP port). Use `0` to let the OS pick a free port.
+  - `host` ?<[string]> The hostname or IP address to bind to. Defaults to `'127.0.0.1'` (localhost only).
+  - `name` ?<[string]> Display name used in log output prefixes. Defaults to `'OtelCollector'`.
+
+Configuration for the built-in [OTLP/HTTP](https://opentelemetry.io/docs/specs/otlp/) collector. When set, Playwright starts a local [OpenTelemetry](https://opentelemetry.io/) collector before any tests run and shuts it down afterwards — mirroring the lifecycle of [`property: TestConfig.webServer`].
+
+The collector listens for [OTLP/HTTP](https://opentelemetry.io/docs/specs/otlp/) JSON (`POST /v1/traces`) and automatically sets the `OTEL_EXPORTER_OTLP_ENDPOINT` environment variable so any [OpenTelemetry](https://opentelemetry.io/) SDK in the same process discovers it automatically.
+
+**Usage**
+
+```js title="playwright.config.ts"
+import { defineConfig } from '@playwright/test';
+
+export default defineConfig({
+  otelCollector: {
+    port: 4318,
+  },
+});
+```
+
 ## property: TestConfig.outputDir
 * since: v1.10
 - type: ?<[string]>

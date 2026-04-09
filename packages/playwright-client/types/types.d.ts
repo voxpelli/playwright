@@ -22000,6 +22000,132 @@ export interface Touchscreen {
  */
 export interface Tracing {
   /**
+   * Adds server-side spans to the current trace. This allows correlating Playwright actions with server-side operations
+   * (e.g., database queries, API calls) instrumented with [OpenTelemetry](https://opentelemetry.io/).
+   *
+   * All server spans appear in the Trace Viewer's **Server** tab, which shows span name, service name, duration, and
+   * status. Spans are also shown as coloured bars in the timeline, making it easy to correlate server-side activity
+   * with browser actions. Additionally, spans with `status: 'error'` appear in the **Errors** tab alongside
+   * browser-side errors, making it easier to diagnose failures that originate on the server.
+   *
+   * Use [tracing.getContext()](https://playwright.dev/docs/api/class-tracing#tracing-get-context) to obtain the
+   * `traceId` to pass to your server instrumentation.
+   *
+   * **Usage**
+   *
+   * ```js
+   * const { traceId } = await context.tracing.getContext();
+   *
+   * // In your server fixture, instrument with OpenTelemetry and collect spans.
+   * // After the test, add the collected spans to the trace:
+   * await context.tracing.addServerSpans([
+   *   {
+   *     traceId,
+   *     spanId: 'abcdef1234567890',
+   *     name: 'SELECT users WHERE id = ?',
+   *     startTime: Date.now() - 50,
+   *     endTime: Date.now(),
+   *     status: 'ok',
+   *     resource: { 'service.name': 'database' },
+   *   },
+   * ]);
+   * ```
+   *
+   * @param spans
+   */
+  addServerSpans(spans: ReadonlyArray<{
+    /**
+     * [W3C Trace Context](https://www.w3.org/TR/trace-context/) 128-bit trace ID (32 lowercase hex characters). Should
+     * match the value from [tracing.getContext()](https://playwright.dev/docs/api/class-tracing#tracing-get-context).
+     */
+    traceId: string;
+
+    /**
+     * [W3C Trace Context](https://www.w3.org/TR/trace-context/) 64-bit span ID (16 lowercase hex characters).
+     */
+    spanId: string;
+
+    /**
+     * [W3C Trace Context](https://www.w3.org/TR/trace-context/) span ID of the parent span, if any.
+     */
+    parentSpanId?: string;
+
+    /**
+     * Human-readable name describing the server-side operation.
+     */
+    name: string;
+
+    /**
+     * Start time in milliseconds since the Unix epoch.
+     */
+    startTime: number;
+
+    /**
+     * End time in milliseconds since the Unix epoch.
+     */
+    endTime: number;
+
+    /**
+     * Outcome of the span. All spans appear in the Trace Viewer's **Server** tab. Spans with `'error'` status and a
+     * non-empty `errorMessage` also appear in the **Errors** tab.
+     */
+    status: "ok"|"error"|"unset";
+
+    /**
+     * Error message to display in the Trace Viewer when `status` is `'error'`.
+     */
+    errorMessage?: string;
+
+    /**
+     * [OpenTelemetry span attributes](https://opentelemetry.io/docs/specs/semconv/).
+     */
+    attributes?: { [key: string]: string|number|boolean; };
+
+    /**
+     * [OpenTelemetry resource attributes](https://opentelemetry.io/docs/specs/semconv/resource/) (e.g., `{
+     * 'service.name': 'api-server' }`). The `service.name` attribute is used as a label in the Trace Viewer.
+     */
+    resource?: { [key: string]: string|number|boolean; };
+  }>): Promise<void>;
+
+  /**
+   * Returns the current [W3C Trace Context](https://www.w3.org/TR/trace-context/) identifiers for the active trace
+   * chunk. These can be used to propagate the trace context to server-side instrumentation (e.g., as HTTP headers or
+   * [OpenTelemetry](https://opentelemetry.io/) context), enabling correlation between Playwright actions and
+   * server-side spans.
+   *
+   * Enable `traceContext` in [tracing.start([options])](https://playwright.dev/docs/api/class-tracing#tracing-start) to
+   * activate trace context generation.
+   *
+   * **Usage**
+   *
+   * ```js
+   * await context.tracing.start({ traceContext: true });
+   *
+   * // Get the trace context to pass to your server fixtures.
+   * const { traceId, spanId } = await context.tracing.getContext();
+   *
+   * // Use traceId / spanId in server API calls or test fixtures to associate
+   * // server-side OpenTelemetry spans with this Playwright trace.
+   * await myServerClient.setTraceContext(traceId);
+   * ```
+   *
+   */
+  getContext(): Promise<{
+    /**
+     * [W3C Trace Context](https://www.w3.org/TR/trace-context/) 128-bit trace ID (32 lowercase hex characters), or `null`
+     * if tracing is not active or `traceContext` was not enabled.
+     */
+    traceId: null|string;
+
+    /**
+     * [W3C Trace Context](https://www.w3.org/TR/trace-context/) 64-bit span ID (16 lowercase hex characters) for the root
+     * span of this trace chunk, or `null` if tracing is not active or `traceContext` was not enabled.
+     */
+    spanId: null|string;
+  }>;
+
+  /**
    * **NOTE** Use `test.step` instead when available.
    *
    * Creates a new group within the trace, assigning any subsequent API calls to this group, until
@@ -22101,6 +22227,16 @@ export interface Tracing {
      * Trace name to be shown in the Trace Viewer.
      */
     title?: string;
+
+    /**
+     * When enabled, Playwright will generate a [W3C Trace Context](https://www.w3.org/TR/trace-context/) `traceId` per
+     * trace chunk and a `spanId` per action. These IDs can be retrieved with
+     * [tracing.getContext()](https://playwright.dev/docs/api/class-tracing#tracing-get-context) and used to correlate
+     * Playwright actions with server-side traces (e.g., OpenTelemetry spans). Server-side spans can be added to the trace
+     * with [tracing.addServerSpans(spans)](https://playwright.dev/docs/api/class-tracing#tracing-add-server-spans) and
+     * will appear in the Trace Viewer.
+     */
+    traceContext?: boolean;
   }): Promise<void>;
 
   /**

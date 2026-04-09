@@ -55,6 +55,14 @@ export class TracingDispatcher extends Dispatcher<Tracing, channels.TracingChann
     this._object.groupEnd(progress);
   }
 
+  async tracingGetContext(params: channels.TracingTracingGetContextParams, progress: Progress): Promise<channels.TracingTracingGetContextResult> {
+    return this._object.getContext();
+  }
+
+  async tracingAddServerSpans(params: channels.TracingTracingAddServerSpansParams, progress: Progress): Promise<channels.TracingTracingAddServerSpansResult> {
+    this._object.addServerSpans(params.spans);
+  }
+
   async tracingStopChunk(params: channels.TracingTracingStopChunkParams, progress: Progress): Promise<channels.TracingTracingStopChunkResult> {
     const { artifact, entries } = await this._object.stopChunk(progress, params);
     return { artifact: artifact ? ArtifactDispatcher.from(this, artifact) : undefined, entries };

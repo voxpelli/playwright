@@ -15,6 +15,7 @@
  */
 
 import fs from 'fs';
+import http from 'http';
 import path from 'path';
 
 import * as playwrightLibrary from 'playwright-core';
@@ -804,10 +805,55 @@ class ArtifactsRecorder {
       if ((tracing as any)[this._startedCollectingArtifacts])
         return;
       (tracing as any)[this._startedCollectingArtifacts] = true;
-      if (this._testInfo._tracing.traceOptions() && (tracing as any)[kTracingStarted])
+      if (this._testInfo._tracing.traceOptions() && (tracing as any)[kTracingStarted]) {
+        await _drainOtelSpansIntoTracing(tracing);
         await tracing.stopChunk({ path: this._testInfo._tracing.maybeGenerateNextTraceRecordingPath() });
+      }
     }, { internal: true });
   }
+}
+
+// Drain spans buffered by the OtelCollector plugin (if running) into the trace.
+// The plugin exposes a /v1/drain endpoint at the URL set in PLAYWRIGHT_OTEL_COLLECTOR.
+async function _drainOtelSpansIntoTracing(tracing: Tracing) {
+  const collectorUrl = process.env.PLAYWRIGHT_OTEL_COLLECTOR;
+  if (!collectorUrl)
+    return;
+  const { traceId } = await tracing.getContext();
+  if (!traceId)
+    return;
+  try {
+    const spans = await _httpPost<{ spans: Parameters<typeof tracing.addServerSpans>[0] }>(
+        collectorUrl + '/v1/drain',
+        JSON.stringify({ traceId }),
+    );
+    if (spans?.spans?.length)
+      await tracing.addServerSpans(spans.spans);
+  } catch {
+    // Ignore errors — drain is best-effort.
+  }
+}
+
+function _httpPost<T>(url: string, body: string): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const req = http.request(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
+    }, res => {
+      const chunks: Buffer[] = [];
+      res.on('data', (chunk: Buffer) => chunks.push(chunk));
+      res.on('end', () => {
+        try {
+          resolve(JSON.parse(Buffer.concat(chunks).toString('utf8')) as T);
+        } catch (e) {
+          reject(e);
+        }
+      });
+    });
+    req.on('error', reject);
+    req.write(body);
+    req.end();
+  });
 }
 
 async function installScreencastTitleUpdater(testInfo: TestInfoImpl, context: BrowserContext, testAnnotate?: { level?: 'file' | 'title' | 'step', position?: string, fontSize?: number }) {

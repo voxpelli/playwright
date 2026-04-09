@@ -39,9 +39,11 @@ export type ContextEntry = {
   events: (trace.EventTraceEvent | trace.ConsoleMessageTraceEvent)[];
   stdio: trace.StdioTraceEvent[];
   errors: trace.ErrorTraceEvent[];
+  serverSpans: trace.ServerSpanTraceEvent[];
   hasSource: boolean;
   contextId: string;
   testTimeout?: number;
+  traceId?: string;
 };
 
 export type PageEntry = {
