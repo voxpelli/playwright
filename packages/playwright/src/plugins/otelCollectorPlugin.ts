@@ -41,6 +41,7 @@ export type OtelCollectorOptions = {
 };
 
 // --- Internal OTLP JSON envelope types -----------------------------------------
+// See: https://opentelemetry.io/docs/specs/otlp/#otlphttp
 
 type OtlpKeyValue = {
   key: string;
@@ -132,6 +133,7 @@ function decodeAttributes(attrs: OtlpKeyValue[] | undefined): Record<string, unk
 
 function decodeStatus(status: OtlpSpan['status']): OtelSpan['status'] {
   // OTLP status codes: 0=unset, 1=ok, 2=error
+  // See: https://opentelemetry.io/docs/specs/otlp/#status
   if (!status)
     return 'unset';
   if (status.code === 2)

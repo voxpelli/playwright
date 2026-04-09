@@ -197,6 +197,7 @@ export class Tracing extends SdkObject implements InstrumentationListener, Snaps
     this._state.callIds.clear();
 
     // Generate W3C Trace Context IDs for this chunk when traceContext is enabled.
+    // See: https://www.w3.org/TR/trace-context/
     if (this._state.options.traceContext) {
       this._state.traceId = createGuid();
       this._state.traceRootSpanId = createGuid().substring(0, 16);

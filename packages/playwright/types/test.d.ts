@@ -1033,13 +1033,14 @@ interface TestConfig<TestArgs = {}, WorkerArgs = {}> {
    */
   webServer?: TestConfigWebServer | TestConfigWebServer[];
   /**
-   * Configuration for the built-in OTLP/HTTP collector. When set, Playwright starts a local OpenTelemetry collector
-   * before any tests run and shuts it down afterwards — mirroring the lifecycle of
+   * Configuration for the built-in [OTLP/HTTP](https://opentelemetry.io/docs/specs/otlp/) collector. When set,
+   * Playwright starts a local [OpenTelemetry](https://opentelemetry.io/) collector before any tests run and shuts it
+   * down afterwards — mirroring the lifecycle of
    * [testConfig.webServer](https://playwright.dev/docs/api/class-testconfig#test-config-web-server).
    *
-   * The collector listens for OTLP/HTTP JSON (`POST /v1/traces`) and automatically sets the
-   * `OTEL_EXPORTER_OTLP_ENDPOINT` environment variable so any OpenTelemetry SDK in the same process discovers it
-   * automatically.
+   * The collector listens for [OTLP/HTTP](https://opentelemetry.io/docs/specs/otlp/) JSON (`POST /v1/traces`) and
+   * automatically sets the `OTEL_EXPORTER_OTLP_ENDPOINT` environment variable so any
+   * [OpenTelemetry](https://opentelemetry.io/) SDK in the same process discovers it automatically.
    *
    * **Usage**
    *
@@ -10420,8 +10421,8 @@ interface TestConfigWebServer {
 
 interface TestConfigOtelCollector {
   /**
-   * The port to listen on for OTLP/HTTP JSON requests (`POST /v1/traces`). Defaults to `4318` (the standard OTLP/HTTP
-   * port). Use `0` to let the OS pick a free port.
+   * The port to listen on for [OTLP/HTTP](https://opentelemetry.io/docs/specs/otlp/) JSON requests (`POST /v1/traces`).
+   * Defaults to `4318` (the standard OTLP/HTTP port). Use `0` to let the OS pick a free port.
    */
   port?: number;
 

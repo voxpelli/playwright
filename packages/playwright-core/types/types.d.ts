@@ -22001,7 +22001,7 @@ export interface Touchscreen {
 export interface Tracing {
   /**
    * Adds server-side spans to the current trace. This allows correlating Playwright actions with server-side operations
-   * (e.g., database queries, API calls) instrumented with OpenTelemetry.
+   * (e.g., database queries, API calls) instrumented with [OpenTelemetry](https://opentelemetry.io/).
    *
    * All server spans appear in the Trace Viewer's **Server** tab, which shows span name, service name, duration, and
    * status. Spans are also shown as coloured bars in the timeline, making it easy to correlate server-side activity
@@ -22035,18 +22035,18 @@ export interface Tracing {
    */
   addServerSpans(spans: ReadonlyArray<{
     /**
-     * W3C 128-bit trace ID (32 lowercase hex characters). Should match the value from
-     * [tracing.getContext()](https://playwright.dev/docs/api/class-tracing#tracing-get-context).
+     * [W3C Trace Context](https://www.w3.org/TR/trace-context/) 128-bit trace ID (32 lowercase hex characters). Should
+     * match the value from [tracing.getContext()](https://playwright.dev/docs/api/class-tracing#tracing-get-context).
      */
     traceId: string;
 
     /**
-     * W3C 64-bit span ID (16 lowercase hex characters).
+     * [W3C Trace Context](https://www.w3.org/TR/trace-context/) 64-bit span ID (16 lowercase hex characters).
      */
     spanId: string;
 
     /**
-     * W3C span ID of the parent span, if any.
+     * [W3C Trace Context](https://www.w3.org/TR/trace-context/) span ID of the parent span, if any.
      */
     parentSpanId?: string;
 
@@ -22077,21 +22077,22 @@ export interface Tracing {
     errorMessage?: string;
 
     /**
-     * OpenTelemetry span attributes.
+     * [OpenTelemetry span attributes](https://opentelemetry.io/docs/specs/semconv/).
      */
     attributes?: { [key: string]: string|number|boolean; };
 
     /**
-     * OpenTelemetry resource attributes (e.g., `{ 'service.name': 'api-server' }`). The `service.name` attribute is used
-     * as a label in the Trace Viewer.
+     * [OpenTelemetry resource attributes](https://opentelemetry.io/docs/specs/semconv/resource/) (e.g., `{
+     * 'service.name': 'api-server' }`). The `service.name` attribute is used as a label in the Trace Viewer.
      */
     resource?: { [key: string]: string|number|boolean; };
   }>): Promise<void>;
 
   /**
-   * Returns the current W3C Trace Context identifiers for the active trace chunk. These can be used to propagate the
-   * trace context to server-side instrumentation (e.g., as HTTP headers or OpenTelemetry context), enabling correlation
-   * between Playwright actions and server-side spans.
+   * Returns the current [W3C Trace Context](https://www.w3.org/TR/trace-context/) identifiers for the active trace
+   * chunk. These can be used to propagate the trace context to server-side instrumentation (e.g., as HTTP headers or
+   * [OpenTelemetry](https://opentelemetry.io/) context), enabling correlation between Playwright actions and
+   * server-side spans.
    *
    * Enable `traceContext` in [tracing.start([options])](https://playwright.dev/docs/api/class-tracing#tracing-start) to
    * activate trace context generation.
@@ -22112,14 +22113,14 @@ export interface Tracing {
    */
   getContext(): Promise<{
     /**
-     * W3C 128-bit trace ID (32 lowercase hex characters), or `null` if tracing is not active or `traceContext` was not
-     * enabled.
+     * [W3C Trace Context](https://www.w3.org/TR/trace-context/) 128-bit trace ID (32 lowercase hex characters), or `null`
+     * if tracing is not active or `traceContext` was not enabled.
      */
     traceId: null|string;
 
     /**
-     * W3C 64-bit span ID (16 lowercase hex characters) for the root span of this trace chunk, or `null` if tracing is not
-     * active or `traceContext` was not enabled.
+     * [W3C Trace Context](https://www.w3.org/TR/trace-context/) 64-bit span ID (16 lowercase hex characters) for the root
+     * span of this trace chunk, or `null` if tracing is not active or `traceContext` was not enabled.
      */
     spanId: null|string;
   }>;
