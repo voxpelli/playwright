@@ -317,7 +317,7 @@ export default defineConfig({
 ```
 
 ## property: TestConfig.otelCollector
-* since: v1.53
+* since: v1.60
 - type: ?<[Object]>
   - `port` ?<[int]> The port to listen on for [OTLP/HTTP](https://opentelemetry.io/docs/specs/otlp/) JSON requests (`POST /v1/traces`). Defaults to `4318` (the standard OTLP/HTTP port). Use `0` to let the OS pick a free port.
   - `host` ?<[string]> The hostname or IP address to bind to. Defaults to `'127.0.0.1'` (localhost only).

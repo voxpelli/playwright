@@ -182,6 +182,8 @@ export class OtelCollectorPlugin implements TestRunnerPlugin {
   private _correlator: SpanCorrelator | undefined;
   private _endpoint: string | undefined;
   private _reporter: ReporterV2 | undefined;
+  private _prevOtlpEndpoint: string | undefined;
+  private _prevOtlpProtocol: string | undefined;
 
   constructor(options: OtelCollectorOptions) {
     this._options = options;
@@ -203,8 +205,14 @@ export class OtelCollectorPlugin implements TestRunnerPlugin {
     const address = this._server.address() as net.AddressInfo;
     this._endpoint = `http://${host}:${address.port}`;
 
+    // Preserve original env vars so we can restore them on teardown.
+    this._prevOtlpEndpoint = process.env.OTEL_EXPORTER_OTLP_ENDPOINT;
+    this._prevOtlpProtocol = process.env.OTEL_EXPORTER_OTLP_PROTOCOL;
+
     // Expose endpoint so OTel SDKs in the same process auto-discover it.
     process.env.OTEL_EXPORTER_OTLP_ENDPOINT = this._endpoint;
+    // Force JSON transport: the collector only speaks OTLP/HTTP JSON, not protobuf.
+    process.env.OTEL_EXPORTER_OTLP_PROTOCOL = 'http/json';
     // Expose endpoint so Playwright fixtures in workers can drain spans.
     process.env.PLAYWRIGHT_OTEL_COLLECTOR = this._endpoint;
 
@@ -213,6 +221,17 @@ export class OtelCollectorPlugin implements TestRunnerPlugin {
   }
 
   async teardown(): Promise<void> {
+    // Restore env vars that were overwritten in setup().
+    if (this._prevOtlpEndpoint !== undefined)
+      process.env.OTEL_EXPORTER_OTLP_ENDPOINT = this._prevOtlpEndpoint;
+    else
+      delete process.env.OTEL_EXPORTER_OTLP_ENDPOINT;
+
+    if (this._prevOtlpProtocol !== undefined)
+      process.env.OTEL_EXPORTER_OTLP_PROTOCOL = this._prevOtlpProtocol;
+    else
+      delete process.env.OTEL_EXPORTER_OTLP_PROTOCOL;
+
     delete process.env.PLAYWRIGHT_OTEL_COLLECTOR;
     await new Promise<void>((resolve, reject) => {
       if (!this._server) {
@@ -272,15 +291,20 @@ export class OtelCollectorPlugin implements TestRunnerPlugin {
       const resource = decodeAttributes(resourceSpan.resource?.attributes);
       for (const scopeSpan of resourceSpan.scopeSpans ?? []) {
         for (const span of scopeSpan.spans ?? []) {
-          if (!span.traceId)
+          // Drop spans that are missing required identity or timing fields.
+          if (!span.traceId || !span.spanId || !span.startTimeUnixNano || !span.endTimeUnixNano)
+            continue;
+          const startTime = nanoToMs(span.startTimeUnixNano);
+          const endTime = nanoToMs(span.endTimeUnixNano);
+          if (endTime < startTime)
             continue;
           const otelSpan: OtelSpan = {
             traceId: span.traceId,
-            spanId: span.spanId ?? '',
+            spanId: span.spanId,
             parentSpanId: span.parentSpanId || undefined,
             name: span.name ?? '',
-            startTime: nanoToMs(span.startTimeUnixNano),
-            endTime: nanoToMs(span.endTimeUnixNano),
+            startTime,
+            endTime,
             status: decodeStatus(span.status),
             errorMessage: span.status?.message || undefined,
             attributes: decodeAttributes(span.attributes),

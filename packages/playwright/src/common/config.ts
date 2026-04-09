@@ -144,7 +144,7 @@ export class FullConfigInternal {
 
     const otelCollectors = takeFirst(userConfig.otelCollector, null);
     if (Array.isArray(otelCollectors))
-      this.otelCollectors = otelCollectors;
+      throw new Error(`"otelCollector" config option does not support arrays. Specify a single collector object.`);
     else if (otelCollectors)
       this.otelCollectors = [otelCollectors];
     else

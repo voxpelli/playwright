@@ -191,7 +191,7 @@ export const Timeline: React.FunctionComponent<{
       {serverSpans.length > 0 && <div className='timeline-server-spans-lane'>
         {serverSpans.map(({ span, left, width }) => (
           <div
-            key={span.spanId}
+            key={`${span.traceId}:${span.spanId}:${span.startTime}`}
             className={`timeline-server-span-bar timeline-server-span-bar-${span.status}`}
             style={{ left, width }}
             title={`${span.name} (${span.status})`}
